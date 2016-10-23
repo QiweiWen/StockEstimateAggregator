@@ -8,19 +8,11 @@ import modelbuilder.*;
 
 public class Main {
 
-	public static void main(String[] args) throws IOException, ParseException {
+	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
-		
-		AnalystJudge i = new EndOfPeriod(2012, 9, 2, "59491810", new UpDownMan());
-		try {
-			i.buildAnalystList();
-			i.evaluate_analysts();
-			i.endConnection();
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
+		AnalystJudge j = new NormalReturn (2008,10,26,"59491810",new UpDownMan());
+		j.buildAnalystList();
+		j.evaluate_analysts();
 	}
 
 }

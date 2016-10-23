@@ -19,7 +19,7 @@ public abstract class AnalystJudge {
 	      try {
 	         Class.forName("org.postgresql.Driver");
 	         c = DriverManager
-	            .getConnection("jdbc:postgresql://localhost:5432/reclvls");
+	            .getConnection("jdbc:postgresql://localhost:5432/4121");
 	      } catch (Exception e) {
 	         e.printStackTrace();
 	         System.err.println(e.getClass().getName()+": "+e.getMessage());
@@ -33,35 +33,6 @@ public abstract class AnalystJudge {
 		c.close();
 	}
 
-	@SuppressWarnings("deprecation")
-	protected Date quarter_begin (String today, Statement s) throws SQLException{
-		java.sql.Date date_expr;
-		String sql = String.format(
-				"select cusip, ancdate" +
-				" from ((select max(ancdate) as m from reportdates where cusip = '%s' and ancdate < '%s') as foo"+
-				" join"+
-				" reportdates bar on bar.ancdate = foo.m) as foobar"+
-				" where foobar.cusip = '%s';", this.cusip, today, this.cusip );
-		ResultSet rs = s.executeQuery(sql);
-		rs.next();
-		date_expr = rs.getDate("ancdate");
-		return date_expr;
-	}
-	
-	@SuppressWarnings("deprecation")
-	protected Date quarter_end (String today, Statement s) throws SQLException{
-		java.sql.Date date_expr;
-		String sql = String.format(
-				"select cusip, ancdate" +
-				" from ((select min(ancdate) as m from reportdates where cusip = '%s' and ancdate >= '%s') as foo"+
-				" join"+
-				" reportdates bar on bar.ancdate = foo.m) as foobar"+
-				" where foobar.cusip = '%s';", this.cusip, today, this.cusip );
-		ResultSet rs = s.executeQuery(sql);
-		rs.next();
-		date_expr = rs.getDate("ancdate");
-		return date_expr;
-	}
 	
 	//build the list of relevant analysts
 	public void buildAnalystList () throws SQLException{
@@ -70,17 +41,23 @@ public abstract class AnalystJudge {
 		int month = enddate.get(Calendar.MONTH) + 1;
 		int day = enddate.get(Calendar.DAY_OF_MONTH);
 		String dateexpr = String.format("%04d-%02d-%02d",year,month,day);
-		//find all analysts who rated the company since the company's last quarterly report
-		//step 1: find the date the company released the last quarterly report
-		Date last_report_date = quarter_begin (dateexpr, s);	
-		//step 2: find all analysts who voiced their opinions between
-		//last report date and the requested date
-		String sql = String.format("select analyst, reclvl from recommendations " +
-				"where cusip = '%s' and ancdate > '%s' " +
-				"and ancdate <= '%s' order by ancdate;", this.cusip, last_report_date, dateexpr);
+		enddate.add(Calendar.MONTH, -6);
+		int startyear = enddate.get(Calendar.YEAR);
+		int startmonth = enddate.get(Calendar.MONTH) + 1;
+		int startday = enddate.get(Calendar.DAY_OF_MONTH);
+		String startdateexpr = String.format("%04d-%02d-%02d",startyear,startmonth,startday);
+		//find all analysts who rated the company in the last six months
+		String sql = String.format("select * from recommendations where cusip = '%s' and ancdate < '%s'"
+									+ " and ancdate >= '%s' order by analyst, ancdate desc;", 
+									this.cusip, dateexpr, startdateexpr);
+		enddate.add(Calendar.MONTH, 6);
+		System.out.println(sql);
 		ResultSet rs = s.executeQuery(sql);
 		while (rs.next()){
 			String analyst = rs.getString("analyst");
+			//take only their latest recommendations
+			if (analyst_to_reclvl.containsKey(analyst)) 
+				continue;
 			int reclvl = rs.getInt("reclvl");
 			System.out.println (analyst+" "+Integer.toString(reclvl));
 			analyst_to_reclvl.put(analyst, reclvl);
@@ -88,6 +65,7 @@ public abstract class AnalystJudge {
 	}
 	
 	public void evaluate_analysts () throws Exception{
+		
 		int starting_year = enddate.get(Calendar.YEAR) - 1;
 		int month = enddate.get(Calendar.MONTH);
 		int day = enddate.get(Calendar.DAY_OF_MONTH);
@@ -95,6 +73,7 @@ public abstract class AnalystJudge {
 		Statement s = c.createStatement();
 		ResultSet rs;
 		for (Map.Entry <String,Integer> anpair : analyst_to_reclvl.entrySet()){
+			
 			//step 1
 			//find ratings from the past year
 			String begindateexpr = String.format(fmt,starting_year, month, day);
@@ -105,6 +84,7 @@ public abstract class AnalystJudge {
 			rs = s.executeQuery(sql);
 			rs.next();
 			int num_ratings = rs.getInt ("count");
+			
 			if (num_ratings < num_ratings_threshold){
 				ignored_analysts.add(anpair.getKey());
 				continue;

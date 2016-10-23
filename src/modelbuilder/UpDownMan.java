@@ -11,24 +11,23 @@ public class UpDownMan extends HelpfulnessFinder{
 		super();
 	}
 
-	public Boolean is_correct(int reclvl, double oldval, double newval){
+	public Boolean is_correct(int reclvl, double value){
 		Boolean res = false;
-		double ratio = newval/oldval;
 		switch (reclvl){
 			case 1:
 			case 2:{
-				if (ratio >= 1.10) 
+				if (value >= 0.10) 
 					res = true;
 				break;
 			}
 			case 3:{
-				if (ratio <= 1.10 && ratio >= 0.90)
+				if (value <= 0.10 && value >= -0.10)
 					res = true;
 				break;
 			}
 			case 4:
 			case 5:{
-				if (ratio <= 0.90)
+				if (value <= -0.10)
 					res = true;
 				break;
 			}
