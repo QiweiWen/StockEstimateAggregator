@@ -31,17 +31,21 @@ public class NormalReturn extends AnalystJudge{
 				"where year = %d and month = %d and cusip = '%s';";
 		String startingquery = String.format(queryformat, startyear,startmonth,cusip);
 		String endingquery   = String.format(queryformat, endyear, endmonth, cusip);
-		System.out.println(startingquery);
-		System.out.println(endingquery);
+		//System.out.println(startingquery);
+		//System.out.println(endingquery);
 		Statement s = this.c.createStatement();
 		ResultSet rs = s.executeQuery(startingquery);
-		rs.next();
+		if (!rs.next()){
+			return (double) -1;
+		}
 		double startmktval = rs.getDouble("mktval");
 		rs = s.executeQuery(endingquery);
-		rs.next();
+		if (!rs.next()){
+			return (double) -1;
+		}
 		double endmktval = rs.getDouble("mktval");
 		result = endmktval/startmktval - 1;
-		System.out.println("beg: "+startmktval+"end: "+endmktval);
+		//System.out.println("beg: "+startmktval+"end: "+endmktval);
 		return result;
 	}
 	
@@ -57,8 +61,11 @@ public class NormalReturn extends AnalystJudge{
 			c.setTime(ancdate);
 			int reclvl = rs.getInt("reclvl");
 			String cusip = rs.getString("cusip");
-			double abn_return = get_normal_return (c, cusip);
-			boolean is_he_right = this.h.is_correct(reclvl, abn_return);
+			double nml_return = get_normal_return (c, cusip);
+			if (nml_return == (double) -1){
+				continue;
+			}
+			boolean is_he_right = this.h.is_correct(reclvl, nml_return);
 			if (is_he_right){
 				++num_correct;
 			}

@@ -10,7 +10,7 @@ import java.util.*;
 public abstract class AnalystJudge {
 	public AnalystJudge (int endy, int endm, int endd, String cusip, HelpfulnessFinder h){
 		enddate = Calendar.getInstance();
-		enddate.set(endy, endm - 1, endd);
+		enddate.set(endy, endm, endd);
 		this.cusip = cusip;
 		this.h = h;
 		
@@ -59,7 +59,7 @@ public abstract class AnalystJudge {
 			if (analyst_to_reclvl.containsKey(analyst)) 
 				continue;
 			int reclvl = rs.getInt("reclvl");
-			System.out.println (analyst+" "+Integer.toString(reclvl));
+			//System.out.println (analyst+" "+Integer.toString(reclvl));
 			analyst_to_reclvl.put(analyst, reclvl);
 		}
 	}
@@ -84,6 +84,7 @@ public abstract class AnalystJudge {
 			rs = s.executeQuery(sql);
 			rs.next();
 			int num_ratings = rs.getInt ("count");
+			//System.out.println(num_ratings);
 			
 			if (num_ratings < num_ratings_threshold){
 				ignored_analysts.add(anpair.getKey());
@@ -118,5 +119,5 @@ public abstract class AnalystJudge {
 	protected Calendar enddate;
 	//how many times can someone be right about things
 	//before I stop attributing it to chance? 5 will convince me
-	private static final int num_ratings_threshold = 5;
+	private static final int num_ratings_threshold = 50;
 }

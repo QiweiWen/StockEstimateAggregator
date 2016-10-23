@@ -23,14 +23,23 @@ public class AbnormalReturn extends AnalystJudge {
 		//and also the compound sp500 return, as an "expected return"
 		int startyear = c.get(Calendar.YEAR);
 		int startmonth = c.get(Calendar.MONTH) + 1;
-		c.add(Calendar.MONTH, 6);
+		c.add(Calendar.MONTH, NUM_MONTHS);
 		int endyear = c.get(Calendar.YEAR);
 		int endmonth = c.get(Calendar.MONTH) + 1;
 		assert (endyear - startyear<= 1);
-		String priceformat = 
+		String priceformat;
+		String query;
+		if (endyear != startyear){
+			priceformat = 
 				"select * from monthlystock where ((year = %d and month >= %d)"
 				+" or (year = %d and month <= %d)) and cusip = '%s' order by year, month;";
-		String query = String.format(priceformat, startyear, startmonth, endyear,endmonth,cusip);
+			query = String.format(priceformat, startyear, startmonth, endyear,endmonth,cusip);
+		}else{
+			priceformat = 
+				"select * from monthlystock where (year = %d) and (month >= %d and month <= %d) and cusip = '%s' order by month;";
+			query = String.format(priceformat, startyear, startmonth, endmonth,cusip);
+		}
+		
 		//System.out.println(query);
 		Statement s = this.c.createStatement();
 		ResultSet rs = s.executeQuery(query);
@@ -44,10 +53,15 @@ public class AbnormalReturn extends AnalystJudge {
 			newmktval = rs.getDouble("mktval");
 			if (monthcount == 0){
 				oldmktval = newmktval;
+				++monthcount;
+				continue;
 			}
 			double newspret = 1 + rs.getDouble("spret");
 			spret *= newspret;
 			++monthcount;
+		}
+		if (monthcount != NUM_MONTHS + 1){
+			return (double)-1;
 		}
 		finalmktval = newmktval;
 		
@@ -76,6 +90,9 @@ public class AbnormalReturn extends AnalystJudge {
 			int reclvl = rs.getInt("reclvl");
 			String cusip = rs.getString("cusip");
 			double abn_return = get_abnormal_return (c, cusip);
+			if (abn_return == (double) -1){
+				continue;
+			}
 			boolean is_he_right = this.h.is_correct(reclvl, abn_return);
 			if (is_he_right){
 				++num_correct;
