@@ -25,9 +25,15 @@ public class MktvalCache {
 		//kick a random "cacheline" on capacity miss
 		Random r = new Random();
 		ArrayList<String> keys = new ArrayList<String> (_storage.keySet());
-		String rndkey = keys.get(r.nextInt(keys.size()) );
-		currsize -= _storage.get(rndkey).size();
-		_storage.remove(rndkey);
+		try{
+			String rndkey = keys.get(r.nextInt(keys.size()) );
+			currsize -= _storage.get(rndkey).size();
+			_storage.remove(rndkey);
+		}catch (IllegalArgumentException iae){
+			System.err.println ("what happened?");
+			System.err.println (keys.size());
+			System.exit(1);
+		}
 		
 	}
 	

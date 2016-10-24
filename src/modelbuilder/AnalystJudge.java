@@ -46,6 +46,7 @@ public abstract class AnalystJudge {
 	
 	public void endConnection () throws SQLException{
 		c.close();
+		connpool.close();
 	}
 
 	

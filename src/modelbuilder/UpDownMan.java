@@ -3,8 +3,8 @@ package modelbuilder;
 //a simplistic approach:
 //combine BUY with STRONGBUY and SELL with STRONGSELL
 //HOLD is correct if the value is within  1 +/- 10% of original
-//BUY or STRONGBUY is correct if the value is > 110% of original
-//SELL is correct if the value the value is < 90% of original
+//BUY or STRONGBUY is correct if the value is > 105% of original
+//SELL is correct if the value the value is < 95% of original
 public class UpDownMan extends HelpfulnessFinder{
 	
 	public UpDownMan() {
@@ -16,7 +16,7 @@ public class UpDownMan extends HelpfulnessFinder{
 		switch (reclvl){
 			case 1:
 			case 2:{
-				if (value >= 0.10) 
+				if (value >= 0.05) 
 					res = true;
 				break;
 			}
@@ -27,7 +27,7 @@ public class UpDownMan extends HelpfulnessFinder{
 			}
 			case 4:
 			case 5:{
-				if (value <= -0.10)
+				if (value <= -0.05)
 					res = true;
 				break;
 			}

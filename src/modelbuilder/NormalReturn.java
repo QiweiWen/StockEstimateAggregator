@@ -38,7 +38,8 @@ public class NormalReturn extends AnalystJudge{
 			return (double)-1;
 		}
 		result = endmktval/startmktval - 1;
-		//System.out.println("beg: "+startmktval+"end: "+endmktval);
+		//System.out.println (startyear + "" + startmonth + " " + endyear +""+endmonth);
+		//System.out.println("beg: "+startmktval+" end: "+endmktval);
 		return result;
 	}
 	
@@ -53,6 +54,8 @@ public class NormalReturn extends AnalystJudge{
 			Calendar c = Calendar.getInstance();
 			c.setTime(ancdate);
 			int reclvl = rs.getInt("reclvl");
+			//System.out.println ("announced on " + ancdate + " reclvl "+reclvl);
+			
 			String cusip = rs.getString("cusip");
 			double nml_return = get_normal_return (locl_c, c, cusip);
 			if (nml_return == (double) -1){
