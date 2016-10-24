@@ -8,10 +8,15 @@ import java.sql.ResultSet;
 import java.util.*;
 
 public abstract class AnalystJudge {
-	public AnalystJudge (int endy, int endm, int endd, String cusip, HelpfulnessFinder h){
+	public final int MAX_PORTFOLIO_SIZE = 20;
+	public final int MIN_PORTFOLIO_SIZE = 1;
+	
+	public AnalystJudge (int endy, int endm, int endd, List <String> portfolio, HelpfulnessFinder h) throws Exception{
 		enddate = Calendar.getInstance();
 		enddate.set(endy, endm, endd);
-		this.cusip = cusip;
+		if (portfolio.size() < MIN_PORTFOLIO_SIZE || portfolio.size() > MAX_PORTFOLIO_SIZE)
+			throw new Exception ("too many or too few stocks");
+		this.portfolio = portfolio;
 		this.h = h;
 		
 		//start database connection
@@ -34,6 +39,51 @@ public abstract class AnalystJudge {
 	}
 
 	
+	protected String portfolio_to_sql(){
+		String res = "(";
+		int count = 0;
+		for (String cusip: this.portfolio){
+			if (count++ == 0){
+				res+= String.format("cusip = '%s' ", cusip);
+			}else{
+				res += String.format ("or cusip = '%s' ", cusip);
+			}
+		}
+		res += ")";
+		return res;
+	}
+	
+	private void put_reclvl (String analyst, String cusip, int reclvl){
+		TreeMap <String, Integer> cusip_to_reclvl = 
+				analyst_to_cusip_and_reclvl.get(analyst);
+		if (cusip_to_reclvl == null){
+			TreeMap <String,Integer> ntm = new  TreeMap<String,Integer>();
+			ntm.put(cusip, reclvl);
+			analyst_to_cusip_and_reclvl.put(analyst, ntm);
+		}else{
+			cusip_to_reclvl.put(cusip, reclvl);
+		}
+		
+		TreeMap <String,Integer> analyst_to_reclvl = 
+				cusip_to_analyst_and_reclvl.get(cusip);
+		if (analyst_to_reclvl == null){
+			TreeMap <String,Integer> ntm = new  TreeMap<String,Integer>();
+			ntm.put(analyst, reclvl);
+			cusip_to_analyst_and_reclvl.put(cusip, ntm);
+		}else{
+			analyst_to_reclvl.put(analyst,reclvl);
+		}
+	}
+	
+	private boolean exist_reclvl (String analyst, String cusip){
+		if (!analyst_to_cusip_and_reclvl.containsKey(analyst)){
+			return false;
+		}
+		TreeMap <String,Integer> tm = analyst_to_cusip_and_reclvl.get(analyst);
+		if (tm == null) return false;
+		return tm.containsKey(cusip);
+	}
+	
 	//build the list of relevant analysts
 	public void buildAnalystList () throws SQLException{
 		Statement s = this.c.createStatement();
@@ -47,20 +97,22 @@ public abstract class AnalystJudge {
 		int startday = enddate.get(Calendar.DAY_OF_MONTH);
 		String startdateexpr = String.format("%04d-%02d-%02d",startyear,startmonth,startday);
 		//find all analysts who rated the company in the last six months
-		String sql = String.format("select * from recommendations where cusip = '%s' and ancdate < '%s'"
-									+ " and ancdate >= '%s' order by analyst, ancdate desc;", 
-									this.cusip, dateexpr, startdateexpr);
+		String sql = String.format("select * from recommendations where %s and ancdate < '%s'"
+									+ " and ancdate >= '%s' order by analyst, cusip, ancdate desc;", 
+									portfolio_to_sql(), dateexpr, startdateexpr);
 		enddate.add(Calendar.MONTH, 6);
-		System.out.println(sql);
+		//System.out.println(sql);
 		ResultSet rs = s.executeQuery(sql);
 		while (rs.next()){
 			String analyst = rs.getString("analyst");
+			String cusip = rs.getString("cusip");
 			//take only their latest recommendations
-			if (analyst_to_reclvl.containsKey(analyst)) 
+			if (exist_reclvl(analyst,cusip)) 
 				continue;
 			int reclvl = rs.getInt("reclvl");
-			//System.out.println (analyst+" "+Integer.toString(reclvl));
-			analyst_to_reclvl.put(analyst, reclvl);
+			//System.out.println (rs.getString("cusip") + " "+analyst+" "+Integer.toString(reclvl));
+			//analyst_to_reclvl.put(analyst, reclvl);
+			put_reclvl (analyst, cusip, reclvl);
 		}
 	}
 	
@@ -72,7 +124,7 @@ public abstract class AnalystJudge {
 		String fmt = "%04d-%02d-%02d";
 		Statement s = c.createStatement();
 		ResultSet rs;
-		for (Map.Entry <String,Integer> anpair : analyst_to_reclvl.entrySet()){
+		for (Map.Entry <String,TreeMap<String,Integer>> anpair : analyst_to_cusip_and_reclvl.entrySet()){
 			
 			//step 1
 			//find ratings from the past year
@@ -87,7 +139,6 @@ public abstract class AnalystJudge {
 			//System.out.println(num_ratings);
 			
 			if (num_ratings < num_ratings_threshold){
-				ignored_analysts.add(anpair.getKey());
 				continue;
 			}
 			sql = "select * from recommendations where ancdate >= '" + begindateexpr  +
@@ -101,23 +152,24 @@ public abstract class AnalystJudge {
 		}
 	}
 	
-	TreeMap <Date, TreeSet<String>> companies_needed_on_day = new TreeMap <Date, TreeSet<String>> ();
+	
 	protected abstract double evaluate_analysts_specific (ResultSet rs, String analyst) 
 			throws Exception;
-
-	protected TreeMap <String, Integer> analyst_to_reclvl = new TreeMap <String, Integer> ();
-	protected TreeMap <String, Double> analyst_to_helpfulness = new TreeMap <String,Double> ();
-	protected TreeSet <String> ignored_analysts = new TreeSet<String> ();
+	
+	protected TreeMap <String, TreeMap<String, Integer>> analyst_to_cusip_and_reclvl = new TreeMap <String, TreeMap<String,Integer>> ();
+	protected TreeMap <String, TreeMap<String, Integer>> cusip_to_analyst_and_reclvl = new TreeMap <String, TreeMap<String,Integer>> ();
+	private TreeMap <String, Double> analyst_to_helpfulness = new TreeMap <String,Double> ();
+	
 	protected HelpfulnessFinder h;
 	//postgres stuff
 	protected Connection c;
-	//cusip of the stock of interest
-	protected String cusip;
+	//cusips of the stocks of interest
+	protected List<String> portfolio;
 	//the last day with whose data to build the model
 	//this is to allow using historical
 	//data to check the model
 	protected Calendar enddate;
 	//how many times can someone be right about things
 	//before I stop attributing it to chance? 5 will convince me
-	private static final int num_ratings_threshold = 50;
+	private static final int num_ratings_threshold = 5;
 }

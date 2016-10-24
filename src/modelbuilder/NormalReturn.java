@@ -5,12 +5,13 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Calendar;
+import java.util.List;
 
 public class NormalReturn extends AnalystJudge{
 
-	public NormalReturn(int endy, int endm, int endd, String cusip,
-			HelpfulnessFinder h) {
-		super(endy, endm, endd, cusip, h);
+	public NormalReturn(int endy, int endm, int endd, List <String> portfolio,
+			HelpfulnessFinder h) throws Exception {
+		super(endy, endm, endd, portfolio, h);
 		// TODO Auto-generated constructor stub
 	}
 

@@ -5,12 +5,15 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Calendar;
+import java.util.List;
 
 public class AbnormalReturn extends AnalystJudge {
 	private final int NUM_MONTHS = 6;
-	public AbnormalReturn(int endy, int endm, int endd, String cusip,
-			HelpfulnessFinder h) {
-		super(endy, endm, endd, cusip, h);
+	
+	public AbnormalReturn(int endy, int endm, int endd, List <String> portfolio,
+			HelpfulnessFinder h) throws Exception {
+		super(endy, endm, endd, portfolio, h);
+		// TODO Auto-generated constructor stub
 	}
 
 	private double get_abnormal_return (Calendar beginning, String cusip) throws SQLException{
@@ -69,7 +72,7 @@ public class AbnormalReturn extends AnalystJudge {
 		double act_return = (finalmktval/oldmktval);
 		result = act_return - spret;
 		//String fucked = String.format("finalval: %f, initval: %f, spret: %f, result: %f",
-			//							finalmktval, oldmktval, spret, result);
+		//								finalmktval, oldmktval, spret, result);
 		//System.out.println(fucked);
 		return result;
 	}
