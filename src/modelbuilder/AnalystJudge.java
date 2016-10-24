@@ -6,10 +6,15 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.ResultSet;
 import java.util.*;
+import java.util.concurrent.Semaphore;
+
+import org.postgresql.ds.PGPoolingDataSource;
 
 public abstract class AnalystJudge {
 	public final int MAX_PORTFOLIO_SIZE = 20;
 	public final int MIN_PORTFOLIO_SIZE = 1;
+	public final int NUM_CPU = 4;
+	
 	
 	public AnalystJudge (int endy, int endm, int endd, List <String> portfolio, HelpfulnessFinder h) throws Exception{
 		enddate = Calendar.getInstance();
@@ -23,8 +28,13 @@ public abstract class AnalystJudge {
 		 c = null;
 	      try {
 	         Class.forName("org.postgresql.Driver");
-	         c = DriverManager
-	            .getConnection("jdbc:postgresql://localhost:5432/4121");
+	         connpool = new PGPoolingDataSource();
+	         connpool.setDataSourceName("mypool");
+	         connpool.setServerName("localhost:5432");
+	         connpool.setDatabaseName("4121");
+	         connpool.setMaxConnections(NUM_CPU + 1);
+
+	         this.c = connpool.getConnection();
 	      } catch (Exception e) {
 	         e.printStackTrace();
 	         System.err.println(e.getClass().getName()+": "+e.getMessage());
@@ -53,7 +63,23 @@ public abstract class AnalystJudge {
 		return res;
 	}
 	
-	private void put_reclvl (String analyst, String cusip, int reclvl){
+	protected void sem_wait (Semaphore s){
+		for (;;)
+		try {
+			s.acquire();
+			break;
+		} catch (InterruptedException e) {continue;}
+	}
+	
+	protected void sem_post (Semaphore s){
+		s.release();
+	}
+	
+	private void put_reclvl (String analyst, String cusip, int reclvl, boolean threadsafe){
+		if (threadsafe){
+			sem_wait (sem_atocr);
+			sem_wait (sem_ctoar);
+		}
 		TreeMap <String, Integer> cusip_to_reclvl = 
 				analyst_to_cusip_and_reclvl.get(analyst);
 		if (cusip_to_reclvl == null){
@@ -73,14 +99,32 @@ public abstract class AnalystJudge {
 		}else{
 			analyst_to_reclvl.put(analyst,reclvl);
 		}
+		if (threadsafe){
+			sem_post (sem_ctoar);
+			sem_post (sem_atocr);
+		}
 	}
 	
-	private boolean exist_reclvl (String analyst, String cusip){
+	private boolean exist_reclvl (String analyst, String cusip, boolean threadsafe){
+		if (threadsafe){
+			sem_wait (sem_atocr);
+		}
 		if (!analyst_to_cusip_and_reclvl.containsKey(analyst)){
+			if (threadsafe){
+				sem_post (sem_atocr);
+			}
 			return false;
 		}
 		TreeMap <String,Integer> tm = analyst_to_cusip_and_reclvl.get(analyst);
-		if (tm == null) return false;
+		if (tm == null) {
+			if (threadsafe){
+				sem_post (sem_atocr);
+			}
+			return false;
+		}
+		if (threadsafe){
+			sem_post (sem_atocr);
+		}
 		return tm.containsKey(cusip);
 	}
 	
@@ -107,32 +151,87 @@ public abstract class AnalystJudge {
 			String analyst = rs.getString("analyst");
 			String cusip = rs.getString("cusip");
 			//take only their latest recommendations
-			if (exist_reclvl(analyst,cusip)) 
+			if (exist_reclvl(analyst,cusip,false)) 
 				continue;
 			int reclvl = rs.getInt("reclvl");
 			//System.out.println (rs.getString("cusip") + " "+analyst+" "+Integer.toString(reclvl));
 			//analyst_to_reclvl.put(analyst, reclvl);
-			put_reclvl (analyst, cusip, reclvl);
+			put_reclvl (analyst, cusip, reclvl,false);
 		}
 	}
 	
+
 	public void evaluate_analysts () throws Exception{
 		
+		class kthread implements Runnable{
+
+			private LinkedList <String> arg;
+			private Semaphore s;
+			public kthread (LinkedList <String> arg, Semaphore s){
+				this.arg = arg;
+				this.s = s;
+			}
+			
+			public void run() {
+				try {
+					AnalystJudge.this.thread_evaluate_analysts(arg, s);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		
+		LinkedList <String> all_analysts = new LinkedList <String> ();
+		for (Map.Entry <String,TreeMap<String,Integer>> anpair : analyst_to_cusip_and_reclvl.entrySet()){
+			all_analysts.add(anpair.getKey());
+		}
+		Semaphore listsem = new Semaphore (1, true);
+		
+		LinkedList <Thread> threads = new LinkedList <Thread> ();
+		for (int i = 0; i < NUM_CPU; ++i){
+			Thread t = new Thread (new kthread(all_analysts, listsem));
+			threads.add(i, t);
+			t.setPriority(Thread.MAX_PRIORITY);
+		}
+		for (int i = 0; i < NUM_CPU; ++i){
+			threads.get(i).start();
+		}
+		for (int i = 0; i < NUM_CPU; ++i){
+			threads.get(i).join();
+		}
+		System.out.println (cache.hitrate());
+	}
+	
+	public void thread_evaluate_analysts(LinkedList<String> my_analysts, Semaphore sem) throws Exception{
 		int starting_year = enddate.get(Calendar.YEAR) - 1;
 		int month = enddate.get(Calendar.MONTH);
 		int day = enddate.get(Calendar.DAY_OF_MONTH);
 		String fmt = "%04d-%02d-%02d";
-		Statement s = c.createStatement();
+		
+		Connection locl_c = connpool.getConnection();
+		Statement s = locl_c.createStatement();
 		ResultSet rs;
-		for (Map.Entry <String,TreeMap<String,Integer>> anpair : analyst_to_cusip_and_reclvl.entrySet()){
-			
+		boolean is_empty = false;
+		while (true){
+			sem_wait (sem);
+			String analyst = "";
+			try{
+				analyst = my_analysts.pop();
+			}catch (Exception e){
+				is_empty = true;
+			}finally{
+				sem_post (sem);
+				if (is_empty){
+					break;
+				}
+			}
 			//step 1
 			//find ratings from the past year
 			String begindateexpr = String.format(fmt,starting_year, month, day);
 			String enddateexpr = String.format (fmt, enddate.get(Calendar.YEAR), month, day);
 			String sql = "select count(*) as count from recommendations where ancdate >= '" + begindateexpr +
 						 "' and ancdate < '" + enddateexpr +
-						 "' and analyst = '" + anpair.getKey() +"'";
+						 "' and analyst = '" + analyst +"'";
 			rs = s.executeQuery(sql);
 			rs.next();
 			int num_ratings = rs.getInt ("count");
@@ -143,26 +242,35 @@ public abstract class AnalystJudge {
 			}
 			sql = "select * from recommendations where ancdate >= '" + begindateexpr  +
 					 "' and ancdate < '" + enddateexpr +
-					 "' and analyst = '" + anpair.getKey() + "'";
+					 "' and analyst = '" + analyst + "'";
 			System.out.println (sql);
 			rs = s.executeQuery(sql);
-			double helpfulness = evaluate_analysts_specific (rs, anpair.getKey());
-			System.out.println (anpair.getKey()+":"+helpfulness);
-			analyst_to_helpfulness.put(anpair.getKey(), helpfulness);
+			double helpfulness = evaluate_analysts_specific (locl_c, rs, analyst);
+			System.out.println (analyst+":"+helpfulness);
+			sem_wait (sem_atoh);
+			analyst_to_helpfulness.put(analyst, helpfulness);
+			sem_post (sem_atoh);
 		}
+		locl_c.close();
 	}
 	
-	
-	protected abstract double evaluate_analysts_specific (ResultSet rs, String analyst) 
+	protected abstract double evaluate_analysts_specific (Connection c, ResultSet rs, String analyst) 
 			throws Exception;
 	
+	//acquire in this order
+	private final Semaphore sem_atocr = new Semaphore(1, true);
 	protected TreeMap <String, TreeMap<String, Integer>> analyst_to_cusip_and_reclvl = new TreeMap <String, TreeMap<String,Integer>> ();
+	
+	private final Semaphore sem_ctoar = new Semaphore(1, true);
 	protected TreeMap <String, TreeMap<String, Integer>> cusip_to_analyst_and_reclvl = new TreeMap <String, TreeMap<String,Integer>> ();
+	
+	private final Semaphore sem_atoh = new Semaphore(1, true);
 	private TreeMap <String, Double> analyst_to_helpfulness = new TreeMap <String,Double> ();
 	
 	protected HelpfulnessFinder h;
 	//postgres stuff
 	protected Connection c;
+	protected PGPoolingDataSource connpool;
 	//cusips of the stocks of interest
 	protected List<String> portfolio;
 	//the last day with whose data to build the model
@@ -172,4 +280,7 @@ public abstract class AnalystJudge {
 	//how many times can someone be right about things
 	//before I stop attributing it to chance? 5 will convince me
 	private static final int num_ratings_threshold = 5;
+	
+	protected Semaphore sem_cache = new Semaphore (1, true);
+	protected MktvalCache cache = new MktvalCache();
 }

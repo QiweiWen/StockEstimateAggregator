@@ -1,5 +1,6 @@
 package modelbuilder;
 
+import java.sql.Connection;
 import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -7,6 +8,7 @@ import java.sql.Statement;
 import java.util.Calendar;
 import java.util.List;
 
+//how much is a company worth 6 months after a recommendation, minus the expected return?
 public class AbnormalReturn extends AnalystJudge {
 	private final int NUM_MONTHS = 6;
 	
@@ -16,7 +18,7 @@ public class AbnormalReturn extends AnalystJudge {
 		// TODO Auto-generated constructor stub
 	}
 
-	private double get_abnormal_return (Calendar beginning, String cusip) throws SQLException{
+	private double get_abnormal_return (Connection locl_c, Calendar beginning, String cusip) throws SQLException{
 		double result = 0;
 		//"copy construction"
 		Calendar c = Calendar.getInstance();
@@ -44,7 +46,7 @@ public class AbnormalReturn extends AnalystJudge {
 		}
 		
 		//System.out.println(query);
-		Statement s = this.c.createStatement();
+		Statement s = locl_c.createStatement();
 		ResultSet rs = s.executeQuery(query);
 		//variables of interest
 		double spret = 1;
@@ -81,7 +83,7 @@ public class AbnormalReturn extends AnalystJudge {
 	//all the recommendations made by the analyst in the last year
 	//return value: helpfulness (0-1) of the analyst
 	@Override
-	protected double evaluate_analysts_specific(ResultSet rs, String analyst)
+	protected double evaluate_analysts_specific(Connection locl_c, ResultSet rs, String analyst)
 			throws Exception {
 		int num_predictions = 0,
 			num_correct = 0;
@@ -92,7 +94,7 @@ public class AbnormalReturn extends AnalystJudge {
 			c.setTime(ancdate);
 			int reclvl = rs.getInt("reclvl");
 			String cusip = rs.getString("cusip");
-			double abn_return = get_abnormal_return (c, cusip);
+			double abn_return = get_abnormal_return (locl_c,c, cusip);
 			if (abn_return == (double) -1){
 				continue;
 			}

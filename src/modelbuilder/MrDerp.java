@@ -1,6 +1,7 @@
 package modelbuilder;
 
 import java.io.IOException;
+import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
@@ -16,7 +17,7 @@ public class MrDerp extends AnalystJudge {
 		super(endy, endm, endd, portfolio, h);
 	}
 
-	protected double evaluate_analysts_specific (ResultSet rs, String analyst) throws IOException{
+	protected double evaluate_analysts_specific (Connection locl_c, ResultSet rs, String analyst) throws IOException{
 		return 1;
 	}
 }
