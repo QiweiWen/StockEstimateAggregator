@@ -16,12 +16,12 @@ public class Main {
 		my_portfolio.add("59491810");
 		my_portfolio.add("45920010");
 		my_portfolio.add("45814010");
-		for (;;){
+		//for (;;){
 			AnalystJudge j = new NormalReturn(2008, 10, 26, my_portfolio, new UpDownMan());
 			j.buildAnalystList();
 			j.evaluate_analysts();
 			j.endConnection();
-		}
+	//	}
 	}
 
 }

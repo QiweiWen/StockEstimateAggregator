@@ -15,9 +15,6 @@ import java.util.concurrent.Semaphore;
 public class MktvalCache {
 	private final int CACHE_CAPACITY = 5000;
 	private final int PREFETCH_SIZE = 12;
-	
-	public final int MKTVAL = 0;
-	public final int SPRET  = 1;
 
 	//not threadsafe
 	private void kick (){

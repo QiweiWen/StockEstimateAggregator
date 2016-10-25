@@ -7,8 +7,10 @@ import java.sql.Statement;
 import java.sql.ResultSet;
 import java.util.*;
 import java.util.concurrent.Semaphore;
-
 import org.postgresql.ds.PGPoolingDataSource;
+
+import conformanceFinder.consensusCalc;
+
 
 public abstract class AnalystJudge {
 	public final int MAX_PORTFOLIO_SIZE = 20;
@@ -203,7 +205,15 @@ public abstract class AnalystJudge {
 		System.out.println (cache.hitrate());
 	}
 	
-	public void thread_evaluate_analysts(LinkedList<String> my_analysts, Semaphore sem) throws Exception{
+	public double get_consensus (){
+		double ret = 0;
+		this.conform = new consensusCalc (analyst_to_cusip_and_reclvl,
+										  cusip_to_analyst_and_reclvl,
+										  analyst_to_helpfulness);
+		return ret;
+	}
+	
+	private void thread_evaluate_analysts(LinkedList<String> my_analysts, Semaphore sem) throws Exception{
 		int starting_year = enddate.get(Calendar.YEAR) - 1;
 		int month = enddate.get(Calendar.MONTH) + 1;
 		int day = enddate.get(Calendar.DAY_OF_MONTH);
@@ -213,6 +223,7 @@ public abstract class AnalystJudge {
 		Statement s = locl_c.createStatement();
 		ResultSet rs;
 		boolean is_empty = false;
+		int twat = 0;
 		while (true){
 			sem_wait (sem);
 			String analyst = "";
@@ -226,11 +237,7 @@ public abstract class AnalystJudge {
 					break;
 				}
 			}
-			//TODO:
-			//1. not just in the past year, but no later than six months before enddate
-			//2. take only the latest ratings if a rating has been updated
-			//TODO^
-			
+
 			//step 1
 			//find ratings from the past year
 			String begindateexpr = String.format(fmt,starting_year, month, day);
@@ -260,17 +267,20 @@ public abstract class AnalystJudge {
 					"on (allrec.ad = newest.max and allrec.company = newest.cusip)) as foo;";
 
 			sql = String.format(queryfmt, begindateexpr, enddateexpr, analyst, begindateexpr, enddateexpr, analyst);
-					
+			
 			//System.out.println (sql);
+			
 			rs = s.executeQuery(sql);
 			double helpfulness = evaluate_analysts_specific (locl_c, rs, analyst);
 			System.out.println (analyst+":"+helpfulness);
 			sem_wait (sem_atoh);
 			analyst_to_helpfulness.put(analyst, helpfulness);
 			sem_post (sem_atoh);
+			
 		}
 		locl_c.close();
 	}
+	
 	
 	protected abstract double evaluate_analysts_specific (Connection c, ResultSet rs, String analyst) 
 			throws Exception;
@@ -298,6 +308,7 @@ public abstract class AnalystJudge {
 	//how many times can someone be right about things
 	//before I stop attributing it to chance? 5 will convince me
 	private static final int num_ratings_threshold = 5;
+	private consensusCalc conform;
 	
 	protected Semaphore sem_cache = new Semaphore (1, true);
 	protected MktvalCache cache = new MktvalCache();
