@@ -32,6 +32,7 @@ public class MktvalCache {
 		}catch (IllegalArgumentException iae){
 			System.err.println ("what happened?");
 			System.err.println (keys.size());
+			System.err.println (currsize);
 			System.exit(1);
 		}
 		

@@ -18,7 +18,7 @@ public abstract class AnalystJudge {
 	
 	public AnalystJudge (int endy, int endm, int endd, List <String> portfolio, HelpfulnessFinder h) throws Exception{
 		enddate = Calendar.getInstance();
-		enddate.set(endy, endm, endd);
+		enddate.set(endy, endm - 1, endd);
 		if (portfolio.size() < MIN_PORTFOLIO_SIZE || portfolio.size() > MAX_PORTFOLIO_SIZE)
 			throw new Exception ("too many or too few stocks");
 		this.portfolio = portfolio;
@@ -205,7 +205,7 @@ public abstract class AnalystJudge {
 	
 	public void thread_evaluate_analysts(LinkedList<String> my_analysts, Semaphore sem) throws Exception{
 		int starting_year = enddate.get(Calendar.YEAR) - 1;
-		int month = enddate.get(Calendar.MONTH);
+		int month = enddate.get(Calendar.MONTH) + 1;
 		int day = enddate.get(Calendar.DAY_OF_MONTH);
 		String fmt = "%04d-%02d-%02d";
 		
@@ -226,25 +226,42 @@ public abstract class AnalystJudge {
 					break;
 				}
 			}
+			//TODO:
+			//1. not just in the past year, but no later than six months before enddate
+			//2. take only the latest ratings if a rating has been updated
+			//TODO^
+			
 			//step 1
 			//find ratings from the past year
 			String begindateexpr = String.format(fmt,starting_year, month, day);
-			String enddateexpr = String.format (fmt, enddate.get(Calendar.YEAR), month, day);
-			String sql = "select count(*) as count from recommendations where ancdate >= '" + begindateexpr +
+			Calendar halfyearbefore = Calendar.getInstance();
+			halfyearbefore.setTime(enddate.getTime());
+			halfyearbefore.add(Calendar.MONTH, -6);
+			
+			String enddateexpr = String.format (fmt, halfyearbefore.get(Calendar.YEAR), 
+													 halfyearbefore.get(Calendar.MONTH) + 1, 
+													 halfyearbefore.get(Calendar.DAY_OF_MONTH));
+			String sql = "select count(*) from (select cusip from recommendations where ancdate >= '" + begindateexpr +
 						 "' and ancdate < '" + enddateexpr +
-						 "' and analyst = '" + analyst +"'";
+						 "' and analyst = '" + analyst +"' group by cusip) as foo";
 			rs = s.executeQuery(sql);
 			rs.next();
+			System.out.println (sql);
 			int num_ratings = rs.getInt ("count");
 			//System.out.println(num_ratings);
 			
 			if (num_ratings < num_ratings_threshold){
 				continue;
 			}
-			sql = "select * from recommendations where ancdate >= '" + begindateexpr  +
-					 "' and ancdate < '" + enddateexpr +
-					 "' and analyst = '" + analyst + "'";
-			System.out.println (sql);
+			String queryfmt = "select company as cusip, recl as reclvl, ad as ancdate from "+ 
+					"((select ancdate as ad, reclvl as recl, cusip as company from recommendations where ancdate >= '%s' and ancdate < '%s' and analyst = '%s') as allrec "+
+					"join "+
+					"(select cusip, max(ancdate) from recommendations where ancdate >= '%s' and ancdate < '%s' and analyst = '%s' group by cusip) as newest "+
+					"on (allrec.ad = newest.max and allrec.company = newest.cusip)) as foo;";
+
+			sql = String.format(queryfmt, begindateexpr, enddateexpr, analyst, begindateexpr, enddateexpr, analyst);
+					
+			//System.out.println (sql);
 			rs = s.executeQuery(sql);
 			double helpfulness = evaluate_analysts_specific (locl_c, rs, analyst);
 			System.out.println (analyst+":"+helpfulness);
