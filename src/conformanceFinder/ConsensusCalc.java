@@ -15,9 +15,13 @@ public class ConsensusCalc {
 		for (Map.Entry<String, TreeMap<String,Integer>> me : ctoar.entrySet()){
 			String cusip = me.getKey();
 			TreeMap <String,Integer> ator = me.getValue();
+			//System.out.println (ator);
 			ArrayList <LinkedList <String>> newentry = 
-					new ArrayList <LinkedList <String>> (Collections.nCopies(5, new LinkedList <String> ()));
-			
+					new ArrayList <LinkedList <String>> ();
+			for (int i = 0; i < 5; ++i){
+				newentry.add(new LinkedList<String>());
+			}
+			//System.out.println ("---------------");
 			for (Map.Entry<String, Integer> ar_entry: ator.entrySet()){
 				String analyst = ar_entry.getKey();
 				if (!helpfulness.containsKey(analyst)){
@@ -25,6 +29,7 @@ public class ConsensusCalc {
 				}
 				Integer reclvl = ar_entry.getValue();
 				newentry.get(reclvl - 1).add(analyst);
+				//System.out.println (newentry);
 			}
 			ctora.put(cusip, newentry);
 		}
@@ -72,6 +77,7 @@ public class ConsensusCalc {
 		for (Map.Entry<String, TreeMap <String,Integer>> me: ctoar.entrySet()){
 			String cusip = me.getKey();
 			ArrayList <LinkedList <String>> reclvl_to_analyst = ctora.get(cusip);
+			//System.out.println (reclvl_to_analyst);
 			ArrayList <Double> benefits = new ArrayList <Double>(Collections.nCopies(5, (double)0));
 			double sum = 0;
 			for (int i = 0; i < 5; ++i){
@@ -83,9 +89,9 @@ public class ConsensusCalc {
 				// that's why the thing, erhm, "converges" so quickly
 				// fucking fix it
 				//^TODO:
-				System.out.println (cusip);
-				System.out.println (i);
-				System.out.println (analysts);
+				//System.out.println (cusip);
+			//	System.out.println (i);
+				//System.out.println (analysts);
 				for (String analyst: analysts){
 					sum += helpfulness.get(analyst);
 				}
