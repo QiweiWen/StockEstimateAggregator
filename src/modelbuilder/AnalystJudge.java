@@ -9,7 +9,7 @@ import java.util.*;
 import java.util.concurrent.Semaphore;
 import org.postgresql.ds.PGPoolingDataSource;
 
-import conformanceFinder.consensusCalc;
+import conformanceFinder.ConsensusCalc;
 
 
 public abstract class AnalystJudge {
@@ -207,7 +207,7 @@ public abstract class AnalystJudge {
 	
 	public double get_consensus (){
 		double ret = 0;
-		this.conform = new consensusCalc (analyst_to_cusip_and_reclvl,
+		this.conform = new ConsensusCalc (analyst_to_cusip_and_reclvl,
 										  cusip_to_analyst_and_reclvl,
 										  analyst_to_helpfulness);
 		return ret;
@@ -308,7 +308,7 @@ public abstract class AnalystJudge {
 	//how many times can someone be right about things
 	//before I stop attributing it to chance? 5 will convince me
 	private static final int num_ratings_threshold = 5;
-	private consensusCalc conform;
+	private ConsensusCalc conform;
 	
 	protected Semaphore sem_cache = new Semaphore (1, true);
 	protected MktvalCache cache = new MktvalCache();
