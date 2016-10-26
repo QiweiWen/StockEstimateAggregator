@@ -20,6 +20,9 @@ public class ConsensusCalc {
 			
 			for (Map.Entry<String, Integer> ar_entry: ator.entrySet()){
 				String analyst = ar_entry.getKey();
+				if (!helpfulness.containsKey(analyst)){
+					continue;
+				}
 				Integer reclvl = ar_entry.getValue();
 				newentry.get(reclvl - 1).add(analyst);
 			}
@@ -145,9 +148,46 @@ public class ConsensusCalc {
 				}
 			}
 			
-			//step 2. compute conformance levels
+			//step 2. compute Tr
+			for (Map.Entry<String, Double> me: helpfulness.entrySet()){
+				
+				TreeMap <String,Integer> c_to_r = atocr.get(me.getKey());
+				double running_sum = 0;
+				double my_k = me.getValue();
+				for (Map.Entry<String, Integer> crtuple: c_to_r.entrySet()){
+					//compute sum k*rouLI
+					String cusip = crtuple.getKey();
+					Integer reclvl = crtuple.getValue();
+					double oldrou = rou.get(cusip).get(reclvl - 1);
+					running_sum += oldrou*my_k;
+					
+					//compute the second part of the Tr sum
+					double common_factor = (1 - my_k)/(this.m + 1);
+					for (int i = 0; i < 5;++i){
+						double rouLJ = rou.get(cusip).get(i);
+						rouLJ = Math.pow(rouLJ, (this.m + 1));
+						running_sum += rouLJ * common_factor;
+					}
+				}
+				Tr.put(me.getKey(), running_sum);
+			}
 			
-			
+			//step 3. compute rou(p + 1)
+			for (Map.Entry<String, ArrayList <LinkedList <String>>> me: ctora.entrySet()){
+				String cusip = me.getKey();
+				//compute the common denominator
+				double common_denominator = 0;
+				for (int i = 0; i < 5; ++i){
+					double blj = benefits.get(cusip).get(i);
+					common_denominator += blj*blj;
+				}
+				common_denominator = Math.sqrt(common_denominator);
+				//compute the individual rouLI
+				for (int i = 0; i < 5; ++i){
+					double bli = benefits.get(cusip).get(i);
+					rou.get(cusip).add(i, bli/common_denominator);
+				}
+			}
 			//<\do stuff>
 			List <Double> finalrou = to_vector_rou (rou);
 			discrepency = get_epsilon(initrou, finalrou);

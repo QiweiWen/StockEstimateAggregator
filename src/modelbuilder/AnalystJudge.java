@@ -210,6 +210,7 @@ public abstract class AnalystJudge {
 		this.conform = new ConsensusCalc (analyst_to_cusip_and_reclvl,
 										  cusip_to_analyst_and_reclvl,
 										  analyst_to_helpfulness);
+		//TODO: finish
 		return ret;
 	}
 	
