@@ -32,11 +32,14 @@ public class ConsensusCalc {
 
 	private List <Double> to_vector_rou (TreeMap <String, ArrayList <Double>> rou){
 		LinkedList <Double> vecrou = new LinkedList <Double>();
+		//System.out.println (rou.size());
 		//important to iterate in order or won't converge
 		for (Map.Entry<String, ArrayList<Double>> me: rou.entrySet()){
 			ArrayList <Double> candidates = me.getValue();
+			//System.out.println (candidates.size());
 			vecrou.addAll(candidates);
 		}
+		//System.out.println(vecrou.size());
 		return vecrou;
 	}
 	
@@ -75,24 +78,34 @@ public class ConsensusCalc {
 				sum = 0;
 				//analysts who voted on this list, for this level
 				LinkedList <String> analysts = reclvl_to_analyst.get(i);
+				//TODO:
+				// for some reason, analysts contains everyone, for every cusip and every reclvl
+				// that's why the thing, erhm, "converges" so quickly
+				// fucking fix it
+				//^TODO:
+				System.out.println (cusip);
+				System.out.println (i);
+				System.out.println (analysts);
 				for (String analyst: analysts){
 					sum += helpfulness.get(analyst);
 				}
-				benefits.add(i, sum);
+				benefits.set(i, sum);
 			}
 			//compute common denominator
 			double common_denominator = 0;
 			for (int i = 0; i < 5; ++i){
 				common_denominator += benefits.get(i)*benefits.get(i);
 			}
+			//System.out.println(common_denominator);
 			common_denominator = Math.sqrt(common_denominator);
+			
 			//compute individual rouLI
 			for (int i = 0; i < 5; ++i){
 				double numerator = benefits.get(i);
 				if (rou.get(cusip) == null){
 					rou.put(cusip, new ArrayList <Double> (Collections.nCopies(5, (double)0)));
 				}
-				rou.get(cusip).add(i, numerator/common_denominator);
+				rou.get(cusip).set(i, numerator/common_denominator);
 			}
 		}
 		double discrepency = 0;
@@ -100,6 +113,7 @@ public class ConsensusCalc {
 		//start spinning
 		do{
 			List <Double> initrou = to_vector_rou (rou);
+			//System.out.println (rou);
 			//<do stuff>
 			
 			/*
@@ -128,7 +142,7 @@ public class ConsensusCalc {
 					}else{
 						candidate_benefits = benefits.get(cusip);
 					}
-					candidate_benefits.add(i, candidate_benefits.get(i) + krltr); 
+					candidate_benefits.set(i, candidate_benefits.get(i) + krltr); 
 				}
 				//compute benefits from the second part of the equation
 				TreeMap<String,Integer> cusip_rating_set = ctoar.get(cusip);
@@ -144,7 +158,7 @@ public class ConsensusCalc {
 						running_sum += (unhelpfulness * oldrou * tr);
 					}
 					ArrayList <Double> candidate_benefits = benefits.get(cusip);
-					candidate_benefits.add(i, candidate_benefits.get(i) + running_sum);
+					candidate_benefits.set(i, candidate_benefits.get(i) + running_sum);
 				}
 			}
 			
@@ -185,13 +199,16 @@ public class ConsensusCalc {
 				//compute the individual rouLI
 				for (int i = 0; i < 5; ++i){
 					double bli = benefits.get(cusip).get(i);
-					rou.get(cusip).add(i, bli/common_denominator);
+					rou.get(cusip).set(i, bli/common_denominator);
 				}
 			}
 			//<\do stuff>
 			List <Double> finalrou = to_vector_rou (rou);
 			discrepency = get_epsilon(initrou, finalrou);
+			//System.out.println (discrepency);
+			//System.out.println(Tr);
 			assert (discrepency != (double)-1);
+			
 		}while (discrepency >= epsilon);
 	}
 	
