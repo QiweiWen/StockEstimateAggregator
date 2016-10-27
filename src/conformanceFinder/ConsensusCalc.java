@@ -65,10 +65,25 @@ public class ConsensusCalc {
 		return res;
 	}
 	
+	public int get_winner (String cusip){
+		int res = 0;
+		ArrayList <Double> scores = rou.get(cusip);
+		double max = 0;
+		int maxindex = 0;
+		for (int i = 0; i < 5; ++i){
+			double cand = scores.get(i);
+			if (cand >= max){
+				maxindex = i;
+				max = cand;
+			}
+		}
+		return maxindex + 1;
+	}
+	
 	//iterate until convergence
 	public void converge (){
 		TreeMap <String, Double> Tr = new TreeMap <String,Double> ();
-		TreeMap <String, ArrayList <Double>> rou = new TreeMap <String, ArrayList<Double>> ();
+		rou = new TreeMap <String, ArrayList<Double>> ();
 		//initialise Tr;
 		for (Map.Entry<String, Double> me : helpfulness.entrySet()){
 			Tr.put(me.getKey(), (double)1);
@@ -84,14 +99,7 @@ public class ConsensusCalc {
 				sum = 0;
 				//analysts who voted on this list, for this level
 				LinkedList <String> analysts = reclvl_to_analyst.get(i);
-				//TODO:
-				// for some reason, analysts contains everyone, for every cusip and every reclvl
-				// that's why the thing, erhm, "converges" so quickly
-				// fucking fix it
-				//^TODO:
-				//System.out.println (cusip);
-			//	System.out.println (i);
-				//System.out.println (analysts);
+
 				for (String analyst: analysts){
 					sum += helpfulness.get(analyst);
 				}
@@ -211,7 +219,7 @@ public class ConsensusCalc {
 			//<\do stuff>
 			List <Double> finalrou = to_vector_rou (rou);
 			discrepency = get_epsilon(initrou, finalrou);
-			//System.out.println (discrepency);
+			System.out.println (discrepency);
 			//System.out.println(Tr);
 			assert (discrepency != (double)-1);
 			
@@ -234,5 +242,6 @@ public class ConsensusCalc {
 	//use this to get list of analysts
 	private TreeMap <String, Double>      helpfulness;
 	
+	TreeMap <String, ArrayList <Double>> rou;
 }
 

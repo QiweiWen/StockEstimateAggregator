@@ -29,7 +29,7 @@ public class Main {
 		= {{5,2,1,4},{3,4,3,4},{1,2,1,3},{2,2,2,2},{5,1,5,2}};
 	
 	private final static Double[] k
-		= {(double) 0.23,(double) 0.65,(double) 0.5,(double) 0.3,(double) 0.8};
+		= {(double) 1,(double) 1,(double)1,(double) 1,(double) 1};
 	
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
@@ -68,6 +68,7 @@ public class Main {
 		
 		ConsensusCalc c = new ConsensusCalc (atocr, ctoar, krl);
 		c.converge();
+		System.out.println (c.get_winner("45814010"));
 	}
 
 }
