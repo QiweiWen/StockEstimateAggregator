@@ -205,13 +205,10 @@ public abstract class AnalystJudge {
 		System.out.println (cache.hitrate());
 	}
 	
-	public double get_consensus (){
-		double ret = 0;
-		this.conform = new ConsensusCalc (analyst_to_cusip_and_reclvl,
-										  cusip_to_analyst_and_reclvl,
-										  analyst_to_helpfulness);
-		//TODO: finish
-		return ret;
+	public ConsensusCalc get_consensus_instance (){
+		return new ConsensusCalc (analyst_to_cusip_and_reclvl,
+								  cusip_to_analyst_and_reclvl,
+								  analyst_to_helpfulness);
 	}
 	
 	private void thread_evaluate_analysts(LinkedList<String> my_analysts, Semaphore sem) throws Exception{

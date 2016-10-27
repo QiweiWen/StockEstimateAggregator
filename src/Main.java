@@ -1,3 +1,4 @@
+import java.util.ArrayList;
 import java.util.TreeMap;
 
 import modelbuilder.*;
@@ -19,21 +20,24 @@ public class Main {
 		ctoar.get(cusip).put(analyst, reclvl);
 	}
 	
-	private final static String[] portfolio
-		= {"03783310","59491810","45920010","45814010"};
+//	private final static String[] portfolio
+	//	= {"03783310","59491810","45920010","45814010"};
+	/*
+	private final static String [] portfolio 
+		= {"1","2","3","4","5"};
 	
 	private final static String[] cunts
-		= {"A","B","C","D","E"};
+		= {"A","B","C","D"};
 	
 	private final static Integer[][] fucked
-		= {{5,2,1,4},{3,4,3,4},{1,2,1,3},{2,2,2,2},{5,1,5,2}};
+		= {{1,1,3,1,1},{1,2,4,2,2},{1,2,4,3,2},{2,3,4,3,1}};
 	
 	private final static Double[] k
-		= {(double) 1,(double) 1,(double)1,(double) 1,(double) 1};
-	
+		= {(double) 1,(double) 1,(double)1,(double) 1};
+	*/
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
-		/*
+		
 		ArrayList <String> my_portfolio = new ArrayList <String> ();
 		my_portfolio.add("03783310");
 		my_portfolio.add("59491810");
@@ -45,14 +49,14 @@ public class Main {
 			j.evaluate_analysts();
 			j.endConnection();
 	//	}
-		*/
+		/*
 		TreeMap <String, TreeMap<String, Integer>> atocr
 			= new TreeMap <String, TreeMap<String, Integer>>();
 		TreeMap <String, TreeMap<String, Integer>> ctoar
 			= new TreeMap <String, TreeMap<String, Integer>>();
 		//populate the data structures with test rating data
-		for (int i = 0; i < 5; ++i){
-			for (int j = 0; j < 4; ++j){
+		for (int i = 0; i < 4; ++i){
+			for (int j = 0; j < 5; ++j){
 				String analyst = cunts[i];
 				String cusip = portfolio[j];
 				Integer cuntlvl = fucked[i][j];
@@ -61,14 +65,18 @@ public class Main {
 		}
 		TreeMap <String, Double> krl
 			= new TreeMap <String, Double>();
-		for (int i = 0; i < 5; ++i){
+		for (int i = 0; i < 4; ++i){
 			String analyst = cunts[i];
 			krl.put(analyst, k[i]);
 		}
 		
 		ConsensusCalc c = new ConsensusCalc (atocr, ctoar, krl);
 		c.converge();
-		System.out.println (c.get_winner("45814010"));
+		System.out.println (c.get_winner("5"));
+		*/
+		ConsensusCalc c = j.get_consensus_instance();
+		c.converge();
+		System.out.println (c.get_winner("59491810"));
 	}
 
 }

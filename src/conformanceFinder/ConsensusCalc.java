@@ -68,6 +68,7 @@ public class ConsensusCalc {
 	public int get_winner (String cusip){
 		int res = 0;
 		ArrayList <Double> scores = rou.get(cusip);
+		System.out.println (scores);
 		double max = 0;
 		int maxindex = 0;
 		for (int i = 0; i < 5; ++i){
@@ -81,6 +82,8 @@ public class ConsensusCalc {
 	}
 	
 	//iterate until convergence
+	//ctoar and atocr contain a superset of analysts found in helpfulness,
+	//hence the many checks
 	public void converge (){
 		TreeMap <String, Double> Tr = new TreeMap <String,Double> ();
 		rou = new TreeMap <String, ArrayList<Double>> ();
@@ -99,8 +102,9 @@ public class ConsensusCalc {
 				sum = 0;
 				//analysts who voted on this list, for this level
 				LinkedList <String> analysts = reclvl_to_analyst.get(i);
-
+				
 				for (String analyst: analysts){
+					if (!helpfulness.containsKey(analyst)) continue;
 					sum += helpfulness.get(analyst);
 				}
 				benefits.set(i, sum);
@@ -124,6 +128,7 @@ public class ConsensusCalc {
 		}
 		double discrepency = 0;
 		TreeMap <String, ArrayList <Double>> benefits = new TreeMap <String, ArrayList<Double>> ();
+		int iteration_count = 0;
 		//start spinning
 		do{
 			List <Double> initrou = to_vector_rou (rou);
@@ -132,51 +137,12 @@ public class ConsensusCalc {
 			
 			/*
 			 *  To avoid having to copy stuff around or, perish the thought, to calculate things twice
-			 *  compute in this order: beta->t->rou
+			 *  compute in this order: t->beta->rou
 			 *  
 			 */
 			
-			//step 1. compute benefits
-			for (Map.Entry<String, ArrayList <LinkedList <String>>> me: ctora.entrySet()){
-				String cusip = me.getKey();
-				ArrayList <LinkedList <String>> votes = me.getValue();
-				//Compute benefits from krlTr
-				for (int i = 0; i < 5; ++i){
-					double krltr = 0;
-					LinkedList <String> analysts = votes.get(i);
-					for (String analyst: analysts){
-						double krl = helpfulness.get(analyst);
-						double tr  = Math.pow(Tr.get(analyst),this.a);
-						krltr += krl*tr;
-					}
-					ArrayList <Double> candidate_benefits = null;
-					if (!benefits.containsKey(cusip)){
-						candidate_benefits = new ArrayList <Double> (Collections.nCopies(5, (double)0));
-						benefits.put(cusip, candidate_benefits);
-					}else{
-						candidate_benefits = benefits.get(cusip);
-					}
-					candidate_benefits.set(i, candidate_benefits.get(i) + krltr); 
-				}
-				//compute benefits from the second part of the equation
-				TreeMap<String,Integer> cusip_rating_set = ctoar.get(cusip);
-				for (int i = 0; i < 5; ++i){
-					double running_sum = 0;
-					for (Map.Entry<String, Integer> analyst_reclvl_tuple : cusip_rating_set.entrySet()){
-						double k = helpfulness.get(analyst_reclvl_tuple.getKey());
-						double unhelpfulness = (1-k);
-						double oldrou = rou.get(cusip).get(i);
-						oldrou = Math.pow(oldrou, this.m);
-						double tr = Tr.get(analyst_reclvl_tuple.getKey());
-						tr = Math.pow(tr, this.a);
-						running_sum += (unhelpfulness * oldrou * tr);
-					}
-					ArrayList <Double> candidate_benefits = benefits.get(cusip);
-					candidate_benefits.set(i, candidate_benefits.get(i) + running_sum);
-				}
-			}
-			
-			//step 2. compute Tr
+	
+			//step 1. compute Tr
 			for (Map.Entry<String, Double> me: helpfulness.entrySet()){
 				
 				TreeMap <String,Integer> c_to_r = atocr.get(me.getKey());
@@ -199,6 +165,47 @@ public class ConsensusCalc {
 				}
 				Tr.put(me.getKey(), running_sum);
 			}
+			//step 2. compute benefits
+			for (Map.Entry<String, ArrayList <LinkedList <String>>> me: ctora.entrySet()){
+				String cusip = me.getKey();
+				ArrayList <LinkedList <String>> votes = me.getValue();
+				//Compute benefits from krlTr
+				for (int i = 0; i < 5; ++i){
+					double krltr = 0;
+					LinkedList <String> analysts = votes.get(i);
+					for (String analyst: analysts){
+						if (!helpfulness.containsKey(analyst)) continue;
+						double krl = helpfulness.get(analyst);
+						double tr  = Math.pow(Tr.get(analyst),this.a);
+						krltr += krl*tr;
+					}
+					ArrayList <Double> candidate_benefits = null;
+					if (!benefits.containsKey(cusip)){
+						candidate_benefits = new ArrayList <Double> (Collections.nCopies(5, (double)0));
+						benefits.put(cusip, candidate_benefits);
+					}else{
+						candidate_benefits = benefits.get(cusip);
+					}
+					candidate_benefits.set(i, candidate_benefits.get(i) + krltr); 
+				}
+				//compute benefits from the second part of the equation
+				TreeMap<String,Integer> cusip_rating_set = ctoar.get(cusip);
+				for (int i = 0; i < 5; ++i){
+					double running_sum = 0;
+					for (Map.Entry<String, Integer> analyst_reclvl_tuple : cusip_rating_set.entrySet()){
+						if (!helpfulness.containsKey(analyst_reclvl_tuple.getKey())) continue;
+						double k = helpfulness.get(analyst_reclvl_tuple.getKey());
+						double unhelpfulness = (1-k);
+						double oldrou = rou.get(cusip).get(i);
+						oldrou = Math.pow(oldrou, this.m);
+						double tr = Tr.get(analyst_reclvl_tuple.getKey());
+						tr = Math.pow(tr, this.a);
+						running_sum += (unhelpfulness * oldrou * tr);
+					}
+					ArrayList <Double> candidate_benefits = benefits.get(cusip);
+					candidate_benefits.set(i, candidate_benefits.get(i) + running_sum);
+				}
+			}
 			
 			//step 3. compute rou(p + 1)
 			for (Map.Entry<String, ArrayList <LinkedList <String>>> me: ctora.entrySet()){
@@ -219,11 +226,12 @@ public class ConsensusCalc {
 			//<\do stuff>
 			List <Double> finalrou = to_vector_rou (rou);
 			discrepency = get_epsilon(initrou, finalrou);
-			System.out.println (discrepency);
+			//System.out.println (discrepency);
 			//System.out.println(Tr);
-			assert (discrepency != (double)-1);
-			
+			//assert (discrepency != (double)-1);
+			++iteration_count;
 		}while (discrepency >= epsilon);
+		System.out.println ("Iterations: "+iteration_count);
 	}
 	
 	//constants controlling the weight
