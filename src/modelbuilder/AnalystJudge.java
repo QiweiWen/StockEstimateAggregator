@@ -29,7 +29,7 @@ public abstract class AnalystJudge {
 		//start database connection
 		 c = null;
 	      try {
-	         Class.forName("org.postgresql.Driver");
+	         
 	         connpool = new PGPoolingDataSource();
 	         connpool.setDataSourceName("mypool");
 	         connpool.setServerName("localhost:5432");
@@ -148,7 +148,7 @@ public abstract class AnalystJudge {
 									+ " and ancdate >= '%s' order by analyst, cusip, ancdate desc;", 
 									portfolio_to_sql(), dateexpr, startdateexpr);
 		enddate.add(Calendar.MONTH, 6);
-		//System.out.println(sql);
+		System.out.println(sql);
 		ResultSet rs = s.executeQuery(sql);
 		while (rs.next()){
 			String analyst = rs.getString("analyst");
@@ -206,9 +206,23 @@ public abstract class AnalystJudge {
 	}
 	
 	public ConsensusCalc get_consensus_instance (){
-		return new ConsensusCalc (analyst_to_cusip_and_reclvl,
-								  cusip_to_analyst_and_reclvl,
-								  analyst_to_helpfulness);
+		ConsensusCalc c = new ConsensusCalc (analyst_to_cusip_and_reclvl,
+											 cusip_to_analyst_and_reclvl,
+											 analyst_to_helpfulness);
+		c.set_parameters(a, m);
+		return c;
+	}
+	
+	public void set_parameters (int newa, int newm){
+		if ((newa > 0 && newm > 0)){
+			a = newa;
+			m = newm;
+		}
+	}
+	
+	//use the same cache across different analyst judge instances
+	public MktvalCache get_hot_cache (){
+		return this.cache;
 	}
 	
 	private void thread_evaluate_analysts(LinkedList<String> my_analysts, Semaphore sem) throws Exception{
@@ -221,7 +235,7 @@ public abstract class AnalystJudge {
 		Statement s = locl_c.createStatement();
 		ResultSet rs;
 		boolean is_empty = false;
-		int twat = 0;
+		
 		while (true){
 			sem_wait (sem);
 			String analyst = "";
@@ -306,7 +320,9 @@ public abstract class AnalystJudge {
 	//how many times can someone be right about things
 	//before I stop attributing it to chance? 5 will convince me
 	private static final int num_ratings_threshold = 5;
-	private ConsensusCalc conform;
+
+	private int m = 3;
+	private int a = 2;
 	
 	protected Semaphore sem_cache = new Semaphore (1, true);
 	protected MktvalCache cache = new MktvalCache();

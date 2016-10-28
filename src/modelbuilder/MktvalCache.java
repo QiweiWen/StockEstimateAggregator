@@ -13,7 +13,7 @@ import java.util.concurrent.Semaphore;
 //Date indexed, cusip tagged variable-way-associative cache
 //really stretching the metaphor here
 public class MktvalCache {
-	private final int CACHE_CAPACITY = 5000;
+	private final int CACHE_CAPACITY = 50000;
 	private final int PREFETCH_SIZE = 12;
 
 	//not threadsafe

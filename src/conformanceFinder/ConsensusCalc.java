@@ -81,6 +81,13 @@ public class ConsensusCalc {
 		return maxindex + 1;
 	}
 	
+	public void set_parameters (int newa, int newm){
+		if ((newa > 0 && newm > 0)){
+			this.a = newa;
+			this.m = newm;
+		}
+	}
+	
 	//iterate until convergence
 	//ctoar and atocr contain a superset of analysts found in helpfulness,
 	//hence the many checks
@@ -235,7 +242,7 @@ public class ConsensusCalc {
 	}
 	
 	//constants controlling the weight
-	private final int a = 2, m = 3;
+	private int a = 2, m = 3;
 	//we set the convergence threshold as 10e-5
 	private final double epsilon = 0.00001;
 	
