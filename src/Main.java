@@ -32,7 +32,7 @@ public class Main {
 		String beginning_date = "20071026";
 		Benchmark_options bench = Benchmark_options.analyst;
 		String benchmark_analyst = "GOLDMAN";
-		int default_length = 24;
+		int default_length = 2;
 		int defm = 3,
 			defa = 2;
 		/*
@@ -133,9 +133,9 @@ public class Main {
 		//3. analyst
 		if (cmd.hasOption("bn")){
 			String analyst = cmd.getOptionValue("bn");
-			if (analyst == "MEAN"){
+			if (analyst.compareTo("MEAN") == 0){
 				bench = Benchmark_options.mean;
-			}else if (analyst == "MEDIAN"){
+			}else if (analyst.compareTo("MEDIAN") == 0){
 				bench = Benchmark_options.median;
 			}else{
 				benchmark_analyst = analyst;
@@ -176,7 +176,7 @@ public class Main {
 		Benchmark b = new FixedTrading(use_mr_derp,
 						  			   year, month, day,
 						  			   defm, defa,
-						  			   br,
+						  			   br, bw,
 						  			   bench,
 						  			   benchmark_analyst,default_length);
 		b.run_bench();

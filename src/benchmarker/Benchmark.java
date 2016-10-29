@@ -1,5 +1,6 @@
 package benchmarker;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -20,7 +21,7 @@ public abstract class Benchmark {
 	public Benchmark (boolean derp,
 				      int starty, int startm, int startd,
 				      int mparam, int aparam,
-				      BufferedReader pFile,
+				      BufferedReader pFile, BufferedWriter bw,
 				      Benchmark_options opt,
 				      String opponent, int num_months) throws Exception
 	{
@@ -30,6 +31,10 @@ public abstract class Benchmark {
 		this.start_month = startm;
 		this.start_day = startd;
 		this.months_to_run = num_months;
+		this.derp = derp;
+		this.output_file = bw;
+		this.aparam = aparam;
+		this.mparam = mparam;
 		//build the portfolio list
 		portfolio = new LinkedList <String> ();
 		String line;
@@ -99,12 +104,16 @@ public abstract class Benchmark {
 			}
 			Collections.sort(recs);
 			if (opt == Benchmark_options.mean){
+				//System.out.println ("MEAN:");
+				//System.out.println (recs);
 				int sum = 0;
 				for (Integer rec: recs){
 					sum += rec;
 				}
 				res = (int) ((double)sum/(double)recs.size());
 			}else if (opt == Benchmark_options.median){
+				//System.out.println ("MEDIAN:");
+				//System.out.println (recs);
 				if (recs.size() % 2 == 0){
 					int one = recs.get(recs.size()/2 - 1);
 					int other = recs.get(recs.size()/2);
@@ -157,6 +166,32 @@ public abstract class Benchmark {
 			}
 		}
 		return res;
+	}
+	
+	private void make_report (double my, double his) throws IOException{
+		if (derp){
+			output_file.write("Conformity Only");
+		}else{
+			output_file.write("With Helpfulness Input");
+		}
+		output_file.write("\n");
+		output_file.write(String.format("Using model parameters a = %d, m = %d\n", this.aparam, this.mparam));
+		
+		output_file.write(String.format("Started trading on %04d-%02d-%02d for %d months\n",
+										this.start_year, this.start_month, this.start_day, this.months_to_run));
+		output_file.write("======\nStock Portfolio:\n");
+		for (String stock: this.portfolio){
+			output_file.write(stock + "\n");
+		}
+		output_file.write("======\nBenchmarked Against:");
+		if (this.opt == Benchmark_options.mean){
+			output_file.write("Simple mean\n");
+		}else if (this.opt == Benchmark_options.median){
+			output_file.write("Simple median\n");
+		}else {
+			output_file.write(this.opponent + "\n");
+		}
+		output_file.write(String.format("Resulting Balance: $%f for us, $%f for the opponent\n",my,his));	
 	}
 	
 	public void run_bench() throws Exception{
@@ -218,7 +253,8 @@ public abstract class Benchmark {
 		//sell everything
 		my_balance += sell_everything (c, my_shares);
 		opponent_balance += sell_everything (c, opponent_shares);
-		System.out.println("my final balance "+my_balance+",\nopponent final balance "+opponent_balance);
+		//System.out.println("my final balance "+my_balance+",\nopponent final balance "+opponent_balance);
+		make_report(my_balance, opponent_balance);
 	}
 	
 	private AnalystJudge judge;
@@ -229,4 +265,7 @@ public abstract class Benchmark {
 	private String opponent;
 	private int months_to_run;
 	private LinkedList <String> portfolio;
+	private BufferedWriter output_file;
+	private boolean derp;
+	private int aparam, mparam;
 }
