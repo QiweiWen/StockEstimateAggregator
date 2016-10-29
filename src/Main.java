@@ -17,7 +17,7 @@ public class Main {
 
 
 	
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws Exception {
 		/*
 		 * Define default values for optional command line flags
 		 */
@@ -29,7 +29,7 @@ public class Main {
 			return;
 		}
 		boolean use_mr_derp = false;
-		String beginning_date = "20070101";
+		String beginning_date = "20071026";
 		Benchmark_options bench = Benchmark_options.analyst;
 		String benchmark_analyst = "GOLDMAN";
 		int default_length = 24;
@@ -173,12 +173,13 @@ public class Main {
 		if (cmd.hasOption("ud")){
 			use_mr_derp = true;
 		}
-		Benchmark b = new Benchmark(use_mr_derp,
-						  			year, month, day,
-						  			defm, defa,
-						  			br,
-						  			bench,
-						  			benchmark_analyst,default_length);
+		Benchmark b = new FixedTrading(use_mr_derp,
+						  			   year, month, day,
+						  			   defm, defa,
+						  			   br,
+						  			   bench,
+						  			   benchmark_analyst,default_length);
+		b.run_bench();
 		//the end
 		br.close();
 		bw.close();

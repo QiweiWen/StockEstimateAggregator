@@ -16,7 +16,7 @@ public abstract class AnalystJudge {
 	public final int MAX_PORTFOLIO_SIZE = 20;
 	public final int MIN_PORTFOLIO_SIZE = 1;
 	public final int NUM_CPU = 4;
-	
+	public final int MAX_CONNECTIONS = 10;
 	
 	public AnalystJudge (int endy, int endm, int endd, List <String> portfolio, HelpfulnessFinder h) throws Exception{
 		enddate = Calendar.getInstance();
@@ -34,7 +34,7 @@ public abstract class AnalystJudge {
 	         connpool.setDataSourceName("mypool");
 	         connpool.setServerName("localhost:5432");
 	         connpool.setDatabaseName("4121");
-	         connpool.setMaxConnections(NUM_CPU + 1);
+	         connpool.setMaxConnections(MAX_CONNECTIONS);
 
 	         this.c = connpool.getConnection();
 	      } catch (Exception e) {
@@ -220,9 +220,19 @@ public abstract class AnalystJudge {
 		}
 	}
 	
-	//use the same cache across different analyst judge instances
-	public MktvalCache get_hot_cache (){
-		return this.cache;
+	public void rewind (){
+		analyst_to_cusip_and_reclvl.clear();
+		cusip_to_analyst_and_reclvl.clear();
+		analyst_to_helpfulness.clear();
+		//keep the "hot cache" for subsequent computations
+	}
+	
+	public void set_date (int y, int m, int d){
+		enddate.set(y,  m - 1, d);
+	}
+	
+	public Connection get_connection() throws SQLException{
+		return connpool.getConnection();
 	}
 	
 	private void thread_evaluate_analysts(LinkedList<String> my_analysts, Semaphore sem) throws Exception{

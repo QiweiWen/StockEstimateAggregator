@@ -3,7 +3,9 @@ create table monthlystock(
     year smallint not null,
     month smallint not null,
     mktval float not null,
-    spret float not null
+    spret float not null,
+    closbid float not null,
+    closask float not null
 );
 
 create table recommendations(
