@@ -209,6 +209,9 @@ public abstract class Benchmark {
 		for (String stock: portfolio){
 			my_shares.put(stock, 100);
 			opponent_shares.put(stock, 100);
+			double init = trade (c,100,stock);
+			my_balance += init;
+			opponent_balance += init;
 		}
 		//trade every MONTHS_PER_TRADE many months,
 		//sell everything at the end
