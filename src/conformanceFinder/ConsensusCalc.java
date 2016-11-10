@@ -244,7 +244,7 @@ public class ConsensusCalc {
 	//constants controlling the weight
 	private int a = 2, m = 3;
 	//we set the convergence threshold as 10e-5
-	private final double epsilon = 0.00001;
+	private final double epsilon = 0.0001;
 	
 	private TreeMap <String, TreeMap <String, Integer>> atocr;
 	private TreeMap <String, TreeMap <String, Integer>> ctoar;

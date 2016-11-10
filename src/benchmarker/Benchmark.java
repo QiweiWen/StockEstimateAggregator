@@ -77,7 +77,7 @@ public abstract class Benchmark {
 		if (opt == Benchmark_options.analyst){
 			sqlfmt = "select * from recommendations where analyst = '%s' and cusip = '%s' and ancdate >= '%s' and ancdate < '%s' order by ancdate desc limit(1)";
 			sqlquery = String.format(sqlfmt, this.opponent, cusip, begindateexpr,enddateexpr);
-			System.out.println (sqlquery);
+			//System.out.println (sqlquery);
 			rs = s.executeQuery(sqlquery);
 			
 			if (rs.next()){
@@ -232,6 +232,7 @@ public abstract class Benchmark {
 				consensus_reclvl = cons.get_winner(stock);
 				int mytrade = reclvl_to_share(consensus_reclvl);
 				int opponenttrade = reclvl_to_share (opponent_reclvl);
+				System.out.println ("trading "+stock+ " on "+c.get(Calendar.YEAR)+" "+(c.get(Calendar.MONTH) + 1));
 				System.out.println (opponent_reclvl+ " " + consensus_reclvl);
 				//can't sell more than we own
 				int my_existing = my_shares.get(stock);

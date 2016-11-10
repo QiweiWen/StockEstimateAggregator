@@ -78,7 +78,7 @@ public abstract class AnalystJudge {
 		s.release();
 	}
 	
-	private void put_reclvl (String analyst, String cusip, int reclvl, boolean threadsafe){
+	protected void put_reclvl (String analyst, String cusip, int reclvl, boolean threadsafe){
 		if (threadsafe){
 			sem_wait (sem_atocr);
 			sem_wait (sem_ctoar);
@@ -108,7 +108,7 @@ public abstract class AnalystJudge {
 		}
 	}
 	
-	private boolean exist_reclvl (String analyst, String cusip, boolean threadsafe){
+	protected boolean exist_reclvl (String analyst, String cusip, boolean threadsafe){
 		if (threadsafe){
 			sem_wait (sem_atocr);
 		}
@@ -148,7 +148,7 @@ public abstract class AnalystJudge {
 									+ " and ancdate >= '%s' order by analyst, cusip, ancdate desc;", 
 									portfolio_to_sql(), dateexpr, startdateexpr);
 		enddate.add(Calendar.MONTH, 6);
-		System.out.println(sql);
+	//	System.out.println(sql);
 		ResultSet rs = s.executeQuery(sql);
 		while (rs.next()){
 			String analyst = rs.getString("analyst");
@@ -275,7 +275,7 @@ public abstract class AnalystJudge {
 						 "' and analyst = '" + analyst +"' group by cusip) as foo";
 			rs = s.executeQuery(sql);
 			rs.next();
-			System.out.println (sql);
+			//System.out.println (sql);
 			int num_ratings = rs.getInt ("count");
 			//System.out.println(num_ratings);
 			
@@ -294,7 +294,6 @@ public abstract class AnalystJudge {
 			
 			rs = s.executeQuery(sql);
 			double helpfulness = evaluate_analysts_specific (locl_c, rs, analyst);
-			System.out.println (analyst+":"+helpfulness);
 			sem_wait (sem_atoh);
 			analyst_to_helpfulness.put(analyst, helpfulness);
 			sem_post (sem_atoh);
